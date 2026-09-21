@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Points & Booth Tracking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="max-w-md mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h1 class="text-3xl font-bold text-center mb-6 text-indigo-600">Points & Booth Tracking</h1>
+                <p class="text-center text-gray-600 mb-6">Enter your 8-digit ID to login</p>
+                
+                <div class="mb-4">
+                    <label for="userId" class="block text-gray-700 font-medium mb-2">8-Digit ID</label>
+                    <input 
+                        type="text" 
+                        id="userId" 
+                        maxlength="8" 
+                        pattern="[0-9]{8}"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        placeholder="Enter 8-digit ID"
+                    >
+                </div>
+                
+                <button 
+                    id="loginBtn" 
+                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                >
+                    Login
+                </button>
+                
+                <p id="loginError" class="text-red-500 text-center mt-4 hidden"></p>
+            </div>
+        </div>
+
+        <!-- User Dashboard -->
+        <div id="userDashboard" class="hidden max-w-2xl mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl font-bold text-indigo-600">User Dashboard</h1>
+                    <button id="userLogoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                        Logout
+                    </button>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-gray-600">Your ID: <span id="userDisplayId" class="font-semibold"></span></p>
+                </div>
+                
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-6 mb-6">
+                    <p class="text-white text-lg">Current Points</p>
+                    <p id="userPoints" class="text-white text-4xl font-bold">0</p>
+                </div>
+                
+                <h2 class="text-xl font-semibold mb-4">Booth Status</h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <span class="font-medium">Booth 1</span>
+                        <span id="userBooth1" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <span class="font-medium">Booth 2</span>
+                        <span id="userBooth2" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <span class="font-medium">Booth 3</span>
+                        <span id="userBooth3" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="adminDashboard" class="hidden max-w-4xl mx-auto">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
+                        <p id="adminWelcome" class="text-gray-600"></p>
+                    </div>
+                    <button id="adminLogoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                        Logout
+                    </button>
+                </div>
+                
+                <!-- Admin Tabs -->
+                <div class="flex border-b mb-6">
+                    <button id="tabBooth" class="px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-medium">
+                        Booth Management
+                    </button>
+                    <button id="tabPurchase" class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        User Purchases
+                    </button>
+                </div>
+                
+                <!-- Booth Management Tab -->
+                <div id="boothManagementTab">
+                    <div class="mb-6">
+                        <label for="searchUserId" class="block text-gray-700 font-medium mb-2">Search User by 8-Digit ID</label>
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                id="searchUserId" 
+                                maxlength="8" 
+                                pattern="[0-9]{8}"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Enter 8-digit ID"
+                            >
+                            <button 
+                                id="searchBtn" 
+                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="searchResults" class="hidden">
+                        <div class="border-t pt-6">
+                            <h3 class="text-lg font-semibold mb-4">User Information</h3>
+                            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                                <p class="mb-2"><strong>User ID:</strong> <span id="resultUserId"></span></p>
+                                <p class="mb-2"><strong>Points:</strong> <span id="resultPoints"></span></p>
+                            </div>
+                            
+                            <h4 class="font-medium mb-3">Booth Status</h4>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Booth 1</span>
+                                    <div class="flex items-center gap-3">
+                                        <span id="resultBooth1" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                                        <button id="toggleBooth1" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors">
+                                            Mark Complete
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Booth 2</span>
+                                    <div class="flex items-center gap-3">
+                                        <span id="resultBooth2" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                                        <button id="toggleBooth2" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors">
+                                            Mark Complete
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span>Booth 3</span>
+                                    <div class="flex items-center gap-3">
+                                        <span id="resultBooth3" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                                        <button id="toggleBooth3" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors">
+                                            Mark Complete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p id="searchError" class="text-red-500 mt-4 hidden"></p>
+                </div>
+                
+                <!-- User Purchases Tab -->
+                <div id="purchaseTab" class="hidden">
+                    <div class="mb-6">
+                        <label for="purchaseSearchUserId" class="block text-gray-700 font-medium mb-2">Search User by 8-Digit ID</label>
+                        <div class="flex gap-2">
+                            <input 
+                                type="text" 
+                                id="purchaseSearchUserId" 
+                                maxlength="8" 
+                                pattern="[0-9]{8}"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Enter 8-digit ID"
+                            >
+                            <button 
+                                id="purchaseSearchBtn" 
+                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="purchaseResults" class="hidden">
+                        <div class="border-t pt-6">
+                            <h3 class="text-lg font-semibold mb-4">Purchase Information</h3>
+                            <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                                <p class="mb-2"><strong>User ID:</strong> <span id="purchaseResultUserId"></span></p>
+                                <p class="mb-2"><strong>Current Points:</strong> <span id="purchaseResultPoints"></span></p>
+                                <p class="mb-2"><strong>Booth 1:</strong> <span id="purchaseResultBooth1"></span></p>
+                                <p class="mb-2"><strong>Booth 2:</strong> <span id="purchaseResultBooth2"></span></p>
+                                <p class="mb-2"><strong>Booth 3:</strong> <span id="purchaseResultBooth3"></span></p>
+                            </div>
+                            
+                            <div id="purchaseWarning" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                <p class="text-red-600 font-medium">User has not completed all 3 booths. Not eligible for purchases.</p>
+                            </div>
+                            
+                            <div id="purchaseForm" class="hidden">
+                                <h4 class="font-medium mb-3">Process Purchase</h4>
+                                <div class="flex gap-2">
+                                    <input 
+                                        type="number" 
+                                        id="pointsToDeduct" 
+                                        min="1"
+                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        placeholder="Points to deduct"
+                                    >
+                                    <button 
+                                        id="processPurchaseBtn" 
+                                        class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                    >
+                                        Process
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p id="purchaseSearchError" class="text-red-500 mt-4 hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
