@@ -40,11 +40,26 @@ async function getUser(userId) {
 
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
+const signupScreen = document.getElementById('signupScreen');
 const userDashboard = document.getElementById('userDashboard');
 const adminDashboard = document.getElementById('adminDashboard');
 const userIdInput = document.getElementById('userId');
 const loginBtn = document.getElementById('loginBtn');
 const loginError = document.getElementById('loginError');
+const signupUserIdInput = document.getElementById('signupUserId');
+const signupBtn = document.getElementById('signupBtn');
+const signupError = document.getElementById('signupError');
+
+// Switch between login and signup screens
+document.getElementById('showSignupLink').addEventListener('click', () => {
+    loginScreen.classList.add('hidden');
+    signupScreen.classList.remove('hidden');
+});
+
+document.getElementById('showLoginLink').addEventListener('click', () => {
+    signupScreen.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
+});
 
 // Login handler
 loginBtn.addEventListener('click', async () => {
@@ -56,38 +71,76 @@ loginBtn.addEventListener('click', async () => {
     }
 
     try {
-        // Check if user exists
-        const userRow = await getUser(userId);
-
-        if (!userRow) {
-            // Auto-create user with default fields
-            const { error: insertError } = await db.from('users').insert({
-                id: userId,
-                role: 'user',
-                points_count: 0,
-                booth_1: false,
-                booth_2: false,
-                booth_3: false
-            });
-            if (insertError) throw insertError;
-        }
-
-        // Determine role
+        // Admins don't need a user row
         if (ADMIN_ROLES[userId]) {
             currentUserRole = 'admin';
             currentAdminData = ADMIN_ROLES[userId];
+            currentUser = userId;
+            loginScreen.classList.add('hidden');
             showAdminDashboard(userId);
-        } else {
-            currentUserRole = 'user';
-            showUserDashboard(userId);
+            return;
         }
 
+        // Regular users must have signed up first
+        const userRow = await getUser(userId);
+
+        if (!userRow) {
+            showError(loginError, 'Account not found. Please sign up first.');
+            return;
+        }
+
+        currentUserRole = 'user';
         currentUser = userId;
         loginScreen.classList.add('hidden');
+        showUserDashboard(userId);
 
     } catch (error) {
         console.error('Login error:', error);
         showError(loginError, 'Login failed. Please try again.');
+    }
+});
+
+// Signup handler
+signupBtn.addEventListener('click', async () => {
+    const userId = signupUserIdInput.value.trim();
+
+    if (!userId || !/^\d{8}$/.test(userId)) {
+        showError(signupError, 'Please enter a valid 8-digit ID');
+        return;
+    }
+
+    if (ADMIN_ROLES[userId]) {
+        showError(signupError, 'This ID is reserved. Please choose another.');
+        return;
+    }
+
+    try {
+        const existing = await getUser(userId);
+
+        if (existing) {
+            showError(signupError, 'This ID is already registered. Please login.');
+            return;
+        }
+
+        const { error: insertError } = await db.from('users').insert({
+            id: userId,
+            role: 'user',
+            points_count: 0,
+            booth_1: false,
+            booth_2: false,
+            booth_3: false
+        });
+        if (insertError) throw insertError;
+
+        // Sign up and go straight to the user dashboard
+        currentUserRole = 'user';
+        currentUser = userId;
+        signupScreen.classList.add('hidden');
+        showUserDashboard(userId);
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        showError(signupError, 'Signup failed. Please try again.');
     }
 });
 
@@ -398,9 +451,11 @@ function logout() {
     window.currentPurchaseUser = null;
 
     userIdInput.value = '';
+    signupUserIdInput.value = '';
 
     userDashboard.classList.add('hidden');
     adminDashboard.classList.add('hidden');
+    signupScreen.classList.add('hidden');
     loginScreen.classList.remove('hidden');
 
     // Reset admin tabs
@@ -413,6 +468,10 @@ function logout() {
 
 // Input validation
 userIdInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+});
+
+signupUserIdInput.addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
 });
 
