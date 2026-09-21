@@ -24,19 +24,21 @@
    - **Project URL** (e.g., `https://abcdefghijklmnop.supabase.co`)
    - **anon public** key (under "Project API keys")
 
-### Step 4: Update app.js with Your Config
-1. Open `app.js` in your code editor
-2. Replace the placeholders at the top:
-```javascript
-const SUPABASE_URL = "https://your-project.supabase.co";
-const SUPABASE_ANON_KEY = "your-anon-key-here";
+### Step 4: Configure the App with Your Credentials
+1. Copy `.env.example` to `.env` in the project root
+2. Fill in your values:
 ```
-3. Save the file (and commit/push it so Vercel and Render get the update)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+3. When deploying to Vercel/Render, set these same two variables in the host's environment-variable settings (see [DEPLOYMENT.md](DEPLOYMENT.md))
 
-> The anon key is safe to expose in frontend code — it's protected by Row Level Security policies, just like a Firebase client config.
+> The anon key is safe to expose in frontend code — it's protected by Row Level Security policies, just like a Firebase client config. It's bundled into the built site either way; the env file just keeps it out of git.
 
 ### Step 5: Test the App Locally
-1. Open `index.html` in your web browser
+1. Install dependencies: `npm install`
+2. Start the dev server: `npm run dev`
+3. Open the URL Vite prints (usually http://localhost:5173)
 2. Test with a regular user ID (e.g., "12345678")
 3. Test with admin IDs:
    - "88880001" (Booth 1 Admin)
@@ -49,7 +51,7 @@ const SUPABASE_ANON_KEY = "your-anon-key-here";
 ⚠️ **The RLS policies in `schema.sql` allow anyone to read/write data** (equivalent to Firebase "test mode"). For production:
 - Enable Supabase Auth and require authentication
 - Restrict write access to admin users only
-- Move admin-role checks server-side (anyone can read the hardcoded admin IDs in `app.js`)
+- Move admin-role checks server-side (anyone can read the hardcoded admin IDs in `src/main.js`)
 
 ### Admin ID Reference
 - **88880001**: Booth 1 Admin (can only toggle Booth 1)
@@ -60,4 +62,4 @@ const SUPABASE_ANON_KEY = "your-anon-key-here";
 ### Troubleshooting
 - If you see "permission denied" or `42501` errors, re-run `supabase/schema.sql` — the RLS policies may not have been created
 - If real-time updates don't work, confirm the `alter publication supabase_realtime ...` statement ran successfully
-- If login fails, double-check the URL and anon key in `app.js`, and check the browser console for errors
+- If login fails, double-check `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env` (or the host's env settings), and check the browser console for errors

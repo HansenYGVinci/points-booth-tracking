@@ -1,10 +1,17 @@
-// Supabase Configuration - REPLACE WITH YOUR OWN VALUES
+// Supabase configuration comes from environment variables (see .env.example).
 // Find these in your Supabase project: Settings > API
-const SUPABASE_URL = "YOUR_SUPABASE_URL"; // e.g. https://abcdefghijklmnop.supabase.co
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; // the "anon" "public" key
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    alert('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see .env.example).');
+    throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+}
 
 // Initialize Supabase
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Admin role definitions
 const ADMIN_ROLES = {
