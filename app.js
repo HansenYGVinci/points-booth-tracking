@@ -1,16 +1,10 @@
-// Firebase Configuration - REPLACE WITH YOUR OWN CONFIG
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-};
+// Supabase Configuration - REPLACE WITH YOUR OWN VALUES
+// Find these in your Supabase project: Settings > API
+const SUPABASE_URL = "YOUR_SUPABASE_URL"; // e.g. https://abcdefghijklmnop.supabase.co
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"; // the "anon" "public" key
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// Initialize Supabase
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Admin role definitions
 const ADMIN_ROLES = {
@@ -24,7 +18,18 @@ const ADMIN_ROLES = {
 let currentUser = null;
 let currentUserRole = null;
 let currentAdminData = null;
-let userListener = null;
+let userChannel = null;
+
+// Fetch a user row by 8-digit ID. Returns the row object or null.
+async function getUser(userId) {
+    const { data, error } = await db
+        .from('users')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+    if (error) throw error;
+    return data;
+}
 
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
@@ -37,27 +42,29 @@ const loginError = document.getElementById('loginError');
 // Login handler
 loginBtn.addEventListener('click', async () => {
     const userId = userIdInput.value.trim();
-    
+
     if (!userId || !/^\d{8}$/.test(userId)) {
         showError(loginError, 'Please enter a valid 8-digit ID');
         return;
     }
-    
+
     try {
         // Check if user exists
-        const userDoc = await db.collection('users').doc(userId).get();
-        
-        if (!userDoc.exists) {
+        const userRow = await getUser(userId);
+
+        if (!userRow) {
             // Auto-create user with default fields
-            await db.collection('users').doc(userId).set({
+            const { error: insertError } = await db.from('users').insert({
+                id: userId,
                 role: 'user',
                 points_count: 0,
                 booth_1: false,
                 booth_2: false,
                 booth_3: false
             });
+            if (insertError) throw insertError;
         }
-        
+
         // Determine role
         if (ADMIN_ROLES[userId]) {
             currentUserRole = 'admin';
@@ -67,10 +74,10 @@ loginBtn.addEventListener('click', async () => {
             currentUserRole = 'user';
             showUserDashboard(userId);
         }
-        
+
         currentUser = userId;
         loginScreen.classList.add('hidden');
-        
+
     } catch (error) {
         console.error('Login error:', error);
         showError(loginError, 'Login failed. Please try again.');
@@ -87,25 +94,34 @@ function showError(element, message) {
 }
 
 // User Dashboard
-function showUserDashboard(userId) {
+async function showUserDashboard(userId) {
     userDashboard.classList.remove('hidden');
     document.getElementById('userDisplayId').textContent = userId;
-    
-    // Real-time listener for user data
-    userListener = db.collection('users').doc(userId)
-        .onSnapshot((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                updateUserDashboard(data);
-            }
-        }, (error) => {
-            console.error('Error listening to user data:', error);
-        });
+
+    // Initial load
+    try {
+        const userRow = await getUser(userId);
+        if (userRow) updateUserDashboard(userRow);
+    } catch (error) {
+        console.error('Error loading user data:', error);
+    }
+
+    // Real-time subscription for user data updates
+    userChannel = db.channel(`user-${userId}`)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${userId}`
+        }, (payload) => {
+            updateUserDashboard(payload.new);
+        })
+        .subscribe();
 }
 
 function updateUserDashboard(data) {
     document.getElementById('userPoints').textContent = data.points_count || 0;
-    
+
     updateBoothBadge('userBooth1', data.booth_1);
     updateBoothBadge('userBooth2', data.booth_2);
     updateBoothBadge('userBooth3', data.booth_3);
@@ -124,9 +140,9 @@ function updateBoothBadge(elementId, status) {
 
 // User logout
 document.getElementById('userLogoutBtn').addEventListener('click', () => {
-    if (userListener) {
-        userListener();
-        userListener = null;
+    if (userChannel) {
+        db.removeChannel(userChannel);
+        userChannel = null;
     }
     logout();
 });
@@ -135,7 +151,7 @@ document.getElementById('userLogoutBtn').addEventListener('click', () => {
 function showAdminDashboard(userId) {
     adminDashboard.classList.remove('hidden');
     document.getElementById('adminWelcome').textContent = `Welcome, ${currentAdminData.name}`;
-    
+
     // Setup tab switching
     setupAdminTabs();
 }
@@ -145,7 +161,7 @@ function setupAdminTabs() {
     const tabPurchase = document.getElementById('tabPurchase');
     const boothManagementTab = document.getElementById('boothManagementTab');
     const purchaseTab = document.getElementById('purchaseTab');
-    
+
     tabBooth.addEventListener('click', () => {
         tabBooth.classList.add('border-indigo-600', 'text-indigo-600');
         tabBooth.classList.remove('border-transparent', 'text-gray-500');
@@ -154,7 +170,7 @@ function setupAdminTabs() {
         boothManagementTab.classList.remove('hidden');
         purchaseTab.classList.add('hidden');
     });
-    
+
     tabPurchase.addEventListener('click', () => {
         tabPurchase.classList.add('border-indigo-600', 'text-indigo-600');
         tabPurchase.classList.remove('border-transparent', 'text-gray-500');
@@ -163,16 +179,16 @@ function setupAdminTabs() {
         purchaseTab.classList.remove('hidden');
         boothManagementTab.classList.add('hidden');
     });
-    
+
     // Booth management search
     document.getElementById('searchBtn').addEventListener('click', () => handleBoothSearch());
-    
+
     // Purchase search
     document.getElementById('purchaseSearchBtn').addEventListener('click', () => handlePurchaseSearch());
-    
+
     // Booth toggle buttons
     setupBoothToggles();
-    
+
     // Purchase processing
     document.getElementById('processPurchaseBtn').addEventListener('click', handleProcessPurchase);
 }
@@ -181,7 +197,7 @@ function setupBoothToggles() {
     const toggleBooth1 = document.getElementById('toggleBooth1');
     const toggleBooth2 = document.getElementById('toggleBooth2');
     const toggleBooth3 = document.getElementById('toggleBooth3');
-    
+
     // Hide/disable buttons based on admin role
     if (currentAdminData.type === 'booth1') {
         toggleBooth2.style.display = 'none';
@@ -194,7 +210,7 @@ function setupBoothToggles() {
         toggleBooth2.style.display = 'none';
     }
     // Super admin can see all buttons
-    
+
     toggleBooth1.addEventListener('click', () => handleBoothToggle('booth_1'));
     toggleBooth2.addEventListener('click', () => handleBoothToggle('booth_2'));
     toggleBooth3.addEventListener('click', () => handleBoothToggle('booth_3'));
@@ -204,26 +220,25 @@ async function handleBoothSearch() {
     const searchUserId = document.getElementById('searchUserId').value.trim();
     const searchError = document.getElementById('searchError');
     const searchResults = document.getElementById('searchResults');
-    
+
     if (!searchUserId || !/^\d{8}$/.test(searchUserId)) {
         showError(searchError, 'Please enter a valid 8-digit ID');
         return;
     }
-    
+
     try {
-        const userDoc = await db.collection('users').doc(searchUserId).get();
-        
-        if (!userDoc.exists) {
+        const userRow = await getUser(searchUserId);
+
+        if (!userRow) {
             showError(searchError, 'User not found');
             searchResults.classList.add('hidden');
             return;
         }
-        
-        const data = userDoc.data();
-        displayBoothSearchResults(searchUserId, data);
+
+        displayBoothSearchResults(searchUserId, userRow);
         searchResults.classList.remove('hidden');
         searchError.classList.add('hidden');
-        
+
     } catch (error) {
         console.error('Search error:', error);
         showError(searchError, 'Search failed. Please try again.');
@@ -233,11 +248,11 @@ async function handleBoothSearch() {
 function displayBoothSearchResults(userId, data) {
     document.getElementById('resultUserId').textContent = userId;
     document.getElementById('resultPoints').textContent = data.points_count || 0;
-    
+
     updateBoothBadge('resultBooth1', data.booth_1);
     updateBoothBadge('resultBooth2', data.booth_2);
     updateBoothBadge('resultBooth3', data.booth_3);
-    
+
     // Store current searched user for toggle operations
     window.currentSearchedUser = userId;
 }
@@ -245,19 +260,20 @@ function displayBoothSearchResults(userId, data) {
 async function handleBoothToggle(boothField) {
     const userId = window.currentSearchedUser;
     if (!userId) return;
-    
+
     try {
-        const userRef = db.collection('users').doc(userId);
-        await userRef.update({
-            [boothField]: true
-        });
-        
+        const { error } = await db
+            .from('users')
+            .update({ [boothField]: true })
+            .eq('id', userId);
+        if (error) throw error;
+
         // Refresh the display
-        const userDoc = await userRef.get();
-        if (userDoc.exists) {
-            displayBoothSearchResults(userId, userDoc.data());
+        const userRow = await getUser(userId);
+        if (userRow) {
+            displayBoothSearchResults(userId, userRow);
         }
-        
+
     } catch (error) {
         console.error('Toggle error:', error);
         alert('Failed to update booth status. Please try again.');
@@ -268,26 +284,25 @@ async function handlePurchaseSearch() {
     const searchUserId = document.getElementById('purchaseSearchUserId').value.trim();
     const searchError = document.getElementById('purchaseSearchError');
     const purchaseResults = document.getElementById('purchaseResults');
-    
+
     if (!searchUserId || !/^\d{8}$/.test(searchUserId)) {
         showError(searchError, 'Please enter a valid 8-digit ID');
         return;
     }
-    
+
     try {
-        const userDoc = await db.collection('users').doc(searchUserId).get();
-        
-        if (!userDoc.exists) {
+        const userRow = await getUser(searchUserId);
+
+        if (!userRow) {
             showError(searchError, 'User not found');
             purchaseResults.classList.add('hidden');
             return;
         }
-        
-        const data = userDoc.data();
-        displayPurchaseResults(searchUserId, data);
+
+        displayPurchaseResults(searchUserId, userRow);
         purchaseResults.classList.remove('hidden');
         searchError.classList.add('hidden');
-        
+
     } catch (error) {
         console.error('Search error:', error);
         showError(searchError, 'Search failed. Please try again.');
@@ -300,10 +315,10 @@ function displayPurchaseResults(userId, data) {
     document.getElementById('purchaseResultBooth1').textContent = data.booth_1 ? '✓ Complete' : 'Pending';
     document.getElementById('purchaseResultBooth2').textContent = data.booth_2 ? '✓ Complete' : 'Pending';
     document.getElementById('purchaseResultBooth3').textContent = data.booth_3 ? '✓ Complete' : 'Pending';
-    
+
     const purchaseWarning = document.getElementById('purchaseWarning');
     const purchaseForm = document.getElementById('purchaseForm');
-    
+
     // Check eligibility
     if (data.booth_1 && data.booth_2 && data.booth_3) {
         purchaseWarning.classList.add('hidden');
@@ -312,51 +327,52 @@ function displayPurchaseResults(userId, data) {
         purchaseWarning.classList.remove('hidden');
         purchaseForm.classList.add('hidden');
     }
-    
+
     window.currentPurchaseUser = userId;
 }
 
 async function handleProcessPurchase() {
     const userId = window.currentPurchaseUser;
     const pointsToDeduct = parseInt(document.getElementById('pointsToDeduct').value);
-    
+
     if (!userId) {
         alert('Please search for a user first');
         return;
     }
-    
+
     if (!pointsToDeduct || pointsToDeduct <= 0) {
         alert('Please enter a valid point amount');
         return;
     }
-    
+
     try {
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-        
-        if (!userDoc.exists) {
+        const userRow = await getUser(userId);
+
+        if (!userRow) {
             alert('User not found');
             return;
         }
-        
-        const currentPoints = userDoc.data().points_count || 0;
-        
+
+        const currentPoints = userRow.points_count || 0;
+
         if (pointsToDeduct > currentPoints) {
             alert('Insufficient points');
             return;
         }
-        
-        await userRef.update({
-            points_count: currentPoints - pointsToDeduct
-        });
-        
+
+        const { error } = await db
+            .from('users')
+            .update({ points_count: currentPoints - pointsToDeduct })
+            .eq('id', userId);
+        if (error) throw error;
+
         alert(`Successfully deducted ${pointsToDeduct} points`);
         document.getElementById('pointsToDeduct').value = '';
-        
+
         // Refresh display
-        const updatedDoc = await userRef.get();
-        displayPurchaseResults(userId, updatedDoc.data());
-        
+        const updatedRow = await getUser(userId);
+        displayPurchaseResults(userId, updatedRow);
+
     } catch (error) {
         console.error('Purchase error:', error);
         alert('Failed to process purchase. Please try again.');
@@ -373,16 +389,16 @@ function logout() {
     currentAdminData = null;
     window.currentSearchedUser = null;
     window.currentPurchaseUser = null;
-    
+
     userIdInput.value = '';
-    
+
     userDashboard.classList.add('hidden');
     adminDashboard.classList.add('hidden');
     loginScreen.classList.remove('hidden');
-    
+
     // Reset admin tabs
     document.getElementById('tabBooth').click();
-    
+
     // Hide search results
     document.getElementById('searchResults').classList.add('hidden');
     document.getElementById('purchaseResults').classList.add('hidden');

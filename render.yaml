@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: points-booth-tracking
+    env: static
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: false
