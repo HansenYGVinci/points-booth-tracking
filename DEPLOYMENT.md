@@ -31,17 +31,19 @@ Every push to `master` triggers an automatic redeploy.
 
 ## Render
 
-The repo includes `render.yaml` (Render Blueprint for a static site).
+The app runs on Render as a **Node web service** (configured in `render.yaml`): it builds with Vite and serves `dist/` via `vite preview` (`npm run start`).
 
 1. Go to [render.com](https://render.com) and sign in with GitHub
 2. Click **"New" > "Blueprint"** and connect the `HansenYGVinci/points-booth-tracking` repository
-3. Render detects `render.yaml` and shows the `points-booth-tracking` static site — click **"Apply"**
+3. Render detects `render.yaml` and shows the `points-booth-tracking` service — click **"Apply"**
 4. Render prompts you for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (declared in `render.yaml`) — paste your values
-5. The site builds (`npm install && npm run build`) and goes live at `https://points-booth-tracking.onrender.com`
+5. The service builds (`npm install && npm run build`) and goes live at `https://points-booth-tracking.onrender.com`
 
-(Alternative: **"New" > "Static Site"**, pick the repo, set Build Command to `npm install && npm run build`, Publish Directory to `dist`, and add the two env vars manually.)
+(Alternative: **"New" > "Web Service"**, pick the repo, Runtime **Node**, Build Command `npm install && npm run build`, Start Command `npm run start`, and add the two env vars manually. Do NOT use "Static Site" with default settings or leave the start command as `npm run dev`.)
 
 Every push to `master` triggers an automatic redeploy.
+
+> Free-tier web services spin down after ~15 minutes of inactivity — the first request after that takes up to a minute (cold start). Upgrade the plan or switch to a Static Site (publish directory `dist`, no start command) if that matters.
 
 ## Supabase (Backend)
 

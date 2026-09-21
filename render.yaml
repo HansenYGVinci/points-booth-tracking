@@ -1,9 +1,9 @@
 services:
   - type: web
     name: points-booth-tracking
-    env: static
+    env: node
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    startCommand: npm run start
     pullRequestPreviewsEnabled: false
     envVars:
       - key: VITE_SUPABASE_URL
