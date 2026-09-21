@@ -6,7 +6,7 @@ services:
     startCommand: npm run start
     pullRequestPreviewsEnabled: false
     envVars:
-      - key: VITE_SUPABASE_URL
+      - key: SUPABASE_URL
         sync: false
-      - key: VITE_SUPABASE_ANON_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false

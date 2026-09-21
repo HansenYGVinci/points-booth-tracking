@@ -1,43 +1,25 @@
-// Supabase configuration comes from environment variables (see .env.example).
-// Find these in your Supabase project: Settings > API
-import { createClient } from '@supabase/supabase-js';
+// All data access goes through our API (server/index.js on Render).
+// No Supabase keys exist in this bundle.
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    alert('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see .env.example).');
-    throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+async function api(path, options = {}) {
+    const res = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const err = new Error(data.error || 'Request failed. Please try again.');
+        err.status = res.status;
+        throw err;
+    }
+    return data;
 }
-
-// Initialize Supabase
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Admin role definitions
-const ADMIN_ROLES = {
-    '59322370': { role: 'admin', type: 'super', name: 'Super Admin' },
-    '88880001': { role: 'admin', type: 'booth1', name: 'Booth 1 Admin' },
-    '88880002': { role: 'admin', type: 'booth2', name: 'Booth 2 Admin' },
-    '88880003': { role: 'admin', type: 'booth3', name: 'Booth 3 Admin' },
-    '88889999': { role: 'admin', type: 'super', name: 'Super Admin' }
-};
 
 // Current user state
 let currentUser = null;
 let currentUserRole = null;
 let currentAdminData = null;
-let userChannel = null;
-
-// Fetch a user row by 8-digit ID. Returns the row object or null.
-async function getUser(userId) {
-    const { data, error } = await db
-        .from('users')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
-    if (error) throw error;
-    return data;
-}
+let userPoll = null;
 
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
@@ -72,32 +54,27 @@ loginBtn.addEventListener('click', async () => {
     }
 
     try {
-        // Admins don't need a user row
-        if (ADMIN_ROLES[userId]) {
+        const result = await api('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ id: userId })
+        });
+
+        currentUser = userId;
+
+        if (result.type === 'admin') {
             currentUserRole = 'admin';
-            currentAdminData = ADMIN_ROLES[userId];
-            currentUser = userId;
+            currentAdminData = { type: result.adminType, name: result.name };
             loginScreen.classList.add('hidden');
             showAdminDashboard(userId);
-            return;
+        } else {
+            currentUserRole = 'user';
+            loginScreen.classList.add('hidden');
+            showUserDashboard(userId, result.user);
         }
-
-        // Regular users must have signed up first
-        const userRow = await getUser(userId);
-
-        if (!userRow) {
-            showError(loginError, 'Account not found. Please sign up first.');
-            return;
-        }
-
-        currentUserRole = 'user';
-        currentUser = userId;
-        loginScreen.classList.add('hidden');
-        showUserDashboard(userId);
 
     } catch (error) {
         console.error('Login error:', error);
-        showError(loginError, 'Login failed. Please try again.');
+        showError(loginError, error.message);
     }
 });
 
@@ -110,38 +87,21 @@ signupBtn.addEventListener('click', async () => {
         return;
     }
 
-    if (ADMIN_ROLES[userId]) {
-        showError(signupError, 'This ID is reserved. Please choose another.');
-        return;
-    }
-
     try {
-        const existing = await getUser(userId);
-
-        if (existing) {
-            showError(signupError, 'This ID is already registered. Please login.');
-            return;
-        }
-
-        const { error: insertError } = await db.from('users').insert({
-            id: userId,
-            role: 'user',
-            points_count: 0,
-            booth_1: false,
-            booth_2: false,
-            booth_3: false
+        const result = await api('/api/signup', {
+            method: 'POST',
+            body: JSON.stringify({ id: userId })
         });
-        if (insertError) throw insertError;
 
         // Sign up and go straight to the user dashboard
         currentUserRole = 'user';
         currentUser = userId;
         signupScreen.classList.add('hidden');
-        showUserDashboard(userId);
+        showUserDashboard(userId, result.user);
 
     } catch (error) {
         console.error('Signup error:', error);
-        showError(signupError, 'Signup failed. Please try again.');
+        showError(signupError, error.message);
     }
 });
 
@@ -155,29 +115,21 @@ function showError(element, message) {
 }
 
 // User Dashboard
-async function showUserDashboard(userId) {
+function showUserDashboard(userId, userData) {
     userDashboard.classList.remove('hidden');
     document.getElementById('userDisplayId').textContent = userId;
 
-    // Initial load
-    try {
-        const userRow = await getUser(userId);
-        if (userRow) updateUserDashboard(userRow);
-    } catch (error) {
-        console.error('Error loading user data:', error);
-    }
+    if (userData) updateUserDashboard(userData);
 
-    // Real-time subscription for user data updates
-    userChannel = db.channel(`user-${userId}`)
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'users',
-            filter: `id=eq.${userId}`
-        }, (payload) => {
-            updateUserDashboard(payload.new);
-        })
-        .subscribe();
+    // Poll for updates (admin actions reflect within a few seconds)
+    userPoll = setInterval(async () => {
+        try {
+            const user = await api(`/api/users/${userId}`);
+            updateUserDashboard(user);
+        } catch (error) {
+            console.error('Error refreshing user data:', error);
+        }
+    }, 3000);
 }
 
 function updateUserDashboard(data) {
@@ -201,9 +153,9 @@ function updateBoothBadge(elementId, status) {
 
 // User logout
 document.getElementById('userLogoutBtn').addEventListener('click', () => {
-    if (userChannel) {
-        db.removeChannel(userChannel);
-        userChannel = null;
+    if (userPoll) {
+        clearInterval(userPoll);
+        userPoll = null;
     }
     logout();
 });
@@ -288,21 +240,19 @@ async function handleBoothSearch() {
     }
 
     try {
-        const userRow = await getUser(searchUserId);
-
-        if (!userRow) {
-            showError(searchError, 'User not found');
-            searchResults.classList.add('hidden');
-            return;
-        }
-
-        displayBoothSearchResults(searchUserId, userRow);
+        const user = await api(`/api/users/${searchUserId}`);
+        displayBoothSearchResults(searchUserId, user);
         searchResults.classList.remove('hidden');
         searchError.classList.add('hidden');
 
     } catch (error) {
         console.error('Search error:', error);
-        showError(searchError, 'Search failed. Please try again.');
+        if (error.status === 404) {
+            showError(searchError, 'User not found');
+            searchResults.classList.add('hidden');
+        } else {
+            showError(searchError, 'Search failed. Please try again.');
+        }
     }
 }
 
@@ -323,21 +273,15 @@ async function handleBoothToggle(boothField) {
     if (!userId) return;
 
     try {
-        const { error } = await db
-            .from('users')
-            .update({ [boothField]: true })
-            .eq('id', userId);
-        if (error) throw error;
-
-        // Refresh the display
-        const userRow = await getUser(userId);
-        if (userRow) {
-            displayBoothSearchResults(userId, userRow);
-        }
+        const user = await api(`/api/users/${userId}/booth`, {
+            method: 'POST',
+            body: JSON.stringify({ booth: boothField })
+        });
+        displayBoothSearchResults(userId, user);
 
     } catch (error) {
         console.error('Toggle error:', error);
-        alert('Failed to update booth status. Please try again.');
+        alert(error.message || 'Failed to update booth status. Please try again.');
     }
 }
 
@@ -352,21 +296,19 @@ async function handlePurchaseSearch() {
     }
 
     try {
-        const userRow = await getUser(searchUserId);
-
-        if (!userRow) {
-            showError(searchError, 'User not found');
-            purchaseResults.classList.add('hidden');
-            return;
-        }
-
-        displayPurchaseResults(searchUserId, userRow);
+        const user = await api(`/api/users/${searchUserId}`);
+        displayPurchaseResults(searchUserId, user);
         purchaseResults.classList.remove('hidden');
         searchError.classList.add('hidden');
 
     } catch (error) {
         console.error('Search error:', error);
-        showError(searchError, 'Search failed. Please try again.');
+        if (error.status === 404) {
+            showError(searchError, 'User not found');
+            purchaseResults.classList.add('hidden');
+        } else {
+            showError(searchError, 'Search failed. Please try again.');
+        }
     }
 }
 
@@ -407,36 +349,18 @@ async function handleProcessPurchase() {
     }
 
     try {
-        const userRow = await getUser(userId);
-
-        if (!userRow) {
-            alert('User not found');
-            return;
-        }
-
-        const currentPoints = userRow.points_count || 0;
-
-        if (pointsToDeduct > currentPoints) {
-            alert('Insufficient points');
-            return;
-        }
-
-        const { error } = await db
-            .from('users')
-            .update({ points_count: currentPoints - pointsToDeduct })
-            .eq('id', userId);
-        if (error) throw error;
+        const user = await api(`/api/users/${userId}/purchase`, {
+            method: 'POST',
+            body: JSON.stringify({ points: pointsToDeduct })
+        });
 
         alert(`Successfully deducted ${pointsToDeduct} points`);
         document.getElementById('pointsToDeduct').value = '';
-
-        // Refresh display
-        const updatedRow = await getUser(userId);
-        displayPurchaseResults(userId, updatedRow);
+        displayPurchaseResults(userId, user);
 
     } catch (error) {
         console.error('Purchase error:', error);
-        alert('Failed to process purchase. Please try again.');
+        alert(error.message || 'Failed to process purchase. Please try again.');
     }
 }
 
