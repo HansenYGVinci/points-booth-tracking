@@ -15,6 +15,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Admin role definitions
 const ADMIN_ROLES = {
+    '59322370': { role: 'admin', type: 'super', name: 'Super Admin' },
     '88880001': { role: 'admin', type: 'booth1', name: 'Booth 1 Admin' },
     '88880002': { role: 'admin', type: 'booth2', name: 'Booth 2 Admin' },
     '88880003': { role: 'admin', type: 'booth3', name: 'Booth 3 Admin' },
