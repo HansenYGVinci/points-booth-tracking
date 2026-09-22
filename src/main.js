@@ -196,6 +196,9 @@ function setupAdminTabs() {
     // Booth management search
     document.getElementById('searchBtn').addEventListener('click', () => handleBoothSearch());
 
+    // Add points
+    document.getElementById('addPointsBtn').addEventListener('click', handleAddPoints);
+
     // Purchase search
     document.getElementById('purchaseSearchBtn').addEventListener('click', () => handlePurchaseSearch());
 
@@ -266,6 +269,35 @@ function displayBoothSearchResults(userId, data) {
 
     // Store current searched user for toggle operations
     window.currentSearchedUser = userId;
+}
+
+async function handleAddPoints() {
+    const userId = window.currentSearchedUser;
+    const pointsToAdd = parseInt(document.getElementById('pointsToAdd').value);
+
+    if (!userId) {
+        alert('Please search for a user first');
+        return;
+    }
+
+    if (!pointsToAdd || pointsToAdd <= 0) {
+        alert('Please enter a valid point amount');
+        return;
+    }
+
+    try {
+        const user = await api(`/api/users/${userId}/add-points`, {
+            method: 'POST',
+            body: JSON.stringify({ points: pointsToAdd })
+        });
+
+        document.getElementById('pointsToAdd').value = '';
+        displayBoothSearchResults(userId, user);
+
+    } catch (error) {
+        console.error('Add points error:', error);
+        alert(error.message || 'Failed to add points. Please try again.');
+    }
 }
 
 async function handleBoothToggle(boothField) {

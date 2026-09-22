@@ -168,6 +168,21 @@
                             <div class="bg-gray-50 rounded-lg p-4 mb-4">
                                 <p class="mb-2"><strong>User ID:</strong> <span id="resultUserId"></span></p>
                                 <p class="mb-2"><strong>Points:</strong> <span id="resultPoints"></span></p>
+                                <div class="flex gap-2 mt-3">
+                                    <input
+                                        type="number"
+                                        id="pointsToAdd"
+                                        min="1"
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        placeholder="Points to add"
+                                    >
+                                    <button
+                                        id="addPointsBtn"
+                                        class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
+                                    >
+                                        Add Points
+                                    </button>
+                                </div>
                             </div>
                             
                             <h4 class="font-medium mb-3">Booth Status</h4>

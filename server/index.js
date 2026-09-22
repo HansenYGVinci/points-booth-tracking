@@ -125,6 +125,32 @@ app.post('/api/users/:id/booth', ah(async (req, res) => {
     res.json(data);
 }));
 
+app.post('/api/users/:id/add-points', ah(async (req, res) => {
+    const id = req.params.id;
+    const points = parseInt(req.body.points, 10);
+    if (!isValidId(id)) {
+        return res.status(400).json({ error: 'Please enter a valid 8-digit ID' });
+    }
+    if (!Number.isInteger(points) || points <= 0) {
+        return res.status(400).json({ error: 'Please enter a valid point amount' });
+    }
+
+    const user = await getUser(id);
+    if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .update({ points_count: (user.points_count || 0) + points })
+        .eq('id', id)
+        .select()
+        .single();
+    if (error) throw error;
+
+    res.json(data);
+}));
+
 app.post('/api/users/:id/purchase', ah(async (req, res) => {
     const id = req.params.id;
     const points = parseInt(req.body.points, 10);
