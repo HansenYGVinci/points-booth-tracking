@@ -21,6 +21,17 @@ let currentUserRole = null;
 let currentAdminData = null;
 let userPoll = null;
 
+// Only this ID sees the Manage Admins tab (enforced server-side too)
+const ROOT_ADMIN_ID = '59322370';
+
+// Display names for database-assigned roles
+const ROLE_NAMES = {
+    booth1: 'Booth 1 Admin',
+    booth2: 'Booth 2 Admin',
+    booth3: 'Booth 3 Admin',
+    super: 'Super Admin'
+};
+
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
 const signupScreen = document.getElementById('signupScreen');
@@ -165,33 +176,35 @@ function showAdminDashboard(userId) {
     adminDashboard.classList.remove('hidden');
     document.getElementById('adminWelcome').textContent = `Welcome, ${currentAdminData.name}`;
 
+    // Manage Admins tab is only for the root super admin
+    document.getElementById('tabAdmins').classList.toggle('hidden', currentUser !== ROOT_ADMIN_ID);
+
     // Setup tab switching
     setupAdminTabs();
 }
 
 function setupAdminTabs() {
-    const tabBooth = document.getElementById('tabBooth');
-    const tabPurchase = document.getElementById('tabPurchase');
-    const boothManagementTab = document.getElementById('boothManagementTab');
-    const purchaseTab = document.getElementById('purchaseTab');
+    const tabs = [
+        [document.getElementById('tabBooth'), document.getElementById('boothManagementTab')],
+        [document.getElementById('tabPurchase'), document.getElementById('purchaseTab')],
+        [document.getElementById('tabAdmins'), document.getElementById('adminsTab')]
+    ];
 
-    tabBooth.addEventListener('click', () => {
-        tabBooth.classList.add('border-indigo-600', 'text-indigo-600');
-        tabBooth.classList.remove('border-transparent', 'text-gray-500');
-        tabPurchase.classList.remove('border-indigo-600', 'text-indigo-600');
-        tabPurchase.classList.add('border-transparent', 'text-gray-500');
-        boothManagementTab.classList.remove('hidden');
-        purchaseTab.classList.add('hidden');
-    });
+    function activateTab(activeIndex) {
+        tabs.forEach(([btn, content], i) => {
+            const active = i === activeIndex;
+            btn.classList.toggle('border-indigo-600', active);
+            btn.classList.toggle('text-indigo-600', active);
+            btn.classList.toggle('border-transparent', !active);
+            btn.classList.toggle('text-gray-500', !active);
+            content.classList.toggle('hidden', !active);
+        });
+        if (tabs[activeIndex][0].id === 'tabAdmins') {
+            loadAdminList();
+        }
+    }
 
-    tabPurchase.addEventListener('click', () => {
-        tabPurchase.classList.add('border-indigo-600', 'text-indigo-600');
-        tabPurchase.classList.remove('border-transparent', 'text-gray-500');
-        tabBooth.classList.remove('border-indigo-600', 'text-indigo-600');
-        tabBooth.classList.add('border-transparent', 'text-gray-500');
-        purchaseTab.classList.remove('hidden');
-        boothManagementTab.classList.add('hidden');
-    });
+    tabs.forEach(([btn], i) => btn.addEventListener('click', () => activateTab(i)));
 
     // Booth management search
     document.getElementById('searchBtn').addEventListener('click', () => handleBoothSearch());
@@ -207,6 +220,9 @@ function setupAdminTabs() {
 
     // Purchase processing
     document.getElementById('processPurchaseBtn').addEventListener('click', handleProcessPurchase);
+
+    // Role management
+    document.getElementById('saveAdminBtn').addEventListener('click', handleSaveAdmin);
 }
 
 function setupBoothToggles() {
@@ -396,6 +412,81 @@ async function handleProcessPurchase() {
     }
 }
 
+// Role management (root super admin only)
+async function loadAdminList() {
+    const adminList = document.getElementById('adminList');
+
+    try {
+        const admins = await api(`/api/admins?callerId=${currentUser}`);
+
+        if (!admins.length) {
+            adminList.innerHTML = '<p class="text-gray-500">No database-assigned admins.</p>';
+            return;
+        }
+
+        adminList.innerHTML = '';
+        admins.forEach((admin) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+
+            const label = document.createElement('span');
+            label.innerHTML = `<strong>${admin.id}</strong> — ${ROLE_NAMES[admin.role] || admin.role}`;
+            row.appendChild(label);
+
+            const demoteBtn = document.createElement('button');
+            demoteBtn.textContent = 'Remove Admin';
+            demoteBtn.className = 'bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors';
+            demoteBtn.addEventListener('click', () => handleSetRole(admin.id, 'user'));
+            row.appendChild(demoteBtn);
+
+            adminList.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error('Load admins error:', error);
+        adminList.innerHTML = '<p class="text-red-500">Failed to load admins.</p>';
+    }
+}
+
+async function handleSaveAdmin() {
+    const id = document.getElementById('adminUserId').value.trim();
+    const role = document.getElementById('adminRoleSelect').value;
+
+    if (!id || !/^\d{8}$/.test(id)) {
+        showError(document.getElementById('adminError'), 'Please enter a valid 8-digit ID');
+        return;
+    }
+
+    await handleSetRole(id, role);
+}
+
+async function handleSetRole(id, role) {
+    const adminError = document.getElementById('adminError');
+    const adminSuccess = document.getElementById('adminSuccess');
+
+    try {
+        await api('/api/admins', {
+            method: 'POST',
+            body: JSON.stringify({ callerId: currentUser, id, role })
+        });
+
+        document.getElementById('adminUserId').value = '';
+        adminError.classList.add('hidden');
+        adminSuccess.textContent = role === 'user'
+            ? `Admin access removed for ${id}.`
+            : `${id} is now ${ROLE_NAMES[role]}.`;
+        adminSuccess.classList.remove('hidden');
+        setTimeout(() => adminSuccess.classList.add('hidden'), 3000);
+
+        loadAdminList();
+
+    } catch (error) {
+        console.error('Save admin error:', error);
+        adminSuccess.classList.add('hidden');
+        showError(adminError, error.message);
+    }
+}
+
 // Admin logout
 document.getElementById('adminLogoutBtn').addEventListener('click', logout);
 
@@ -409,6 +500,9 @@ function logout() {
 
     userIdInput.value = '';
     signupUserIdInput.value = '';
+    document.getElementById('adminUserId').value = '';
+    document.getElementById('adminError').classList.add('hidden');
+    document.getElementById('adminSuccess').classList.add('hidden');
 
     userDashboard.classList.add('hidden');
     adminDashboard.classList.add('hidden');
@@ -416,6 +510,7 @@ function logout() {
     loginScreen.classList.remove('hidden');
 
     // Reset admin tabs
+    document.getElementById('tabAdmins').classList.add('hidden');
     document.getElementById('tabBooth').click();
 
     // Hide search results
@@ -437,5 +532,9 @@ document.getElementById('searchUserId').addEventListener('input', (e) => {
 });
 
 document.getElementById('purchaseSearchUserId').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+});
+
+document.getElementById('adminUserId').addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
 });

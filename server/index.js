@@ -22,6 +22,18 @@ const ADMIN_ROLES = {
     '88889999': { type: 'super', name: 'Super Admin' }
 };
 
+// Only this ID may add/remove/change admins
+const ROOT_ADMIN_ID = '59322370';
+
+// Roles stored in users.role that grant admin access
+const ROLE_NAMES = {
+    booth1: 'Booth 1 Admin',
+    booth2: 'Booth 2 Admin',
+    booth3: 'Booth 3 Admin',
+    super: 'Super Admin'
+};
+const ASSIGNABLE_ROLES = ['user', ...Object.keys(ROLE_NAMES)];
+
 const BOOTH_FIELDS = ['booth_1', 'booth_2', 'booth_3'];
 const isValidId = (id) => /^\d{8}$/.test(id);
 
@@ -47,7 +59,7 @@ app.post('/api/login', ah(async (req, res) => {
         return res.status(400).json({ error: 'Please enter a valid 8-digit ID' });
     }
 
-    // Admins don't need a user row
+    // Built-in admins don't need a user row
     const admin = ADMIN_ROLES[id];
     if (admin) {
         return res.json({ type: 'admin', adminType: admin.type, name: admin.name });
@@ -57,6 +69,12 @@ app.post('/api/login', ah(async (req, res) => {
     if (!user) {
         return res.status(404).json({ error: 'Account not found. Please sign up first.' });
     }
+
+    // Database-assigned admin roles
+    if (ROLE_NAMES[user.role]) {
+        return res.json({ type: 'admin', adminType: user.role, name: ROLE_NAMES[user.role] });
+    }
+
     res.json({ type: 'user', user });
 }));
 
@@ -123,6 +141,75 @@ app.post('/api/users/:id/booth', ah(async (req, res) => {
     if (error) throw error;
 
     res.json(data);
+}));
+
+// --- Role management (root super admin only) ---
+
+function requireRootAdmin(req, res) {
+    const callerId = String(req.body.callerId || req.query.callerId || '').trim();
+    if (callerId !== ROOT_ADMIN_ID) {
+        res.status(403).json({ error: 'Only the super admin can manage admins.' });
+        return false;
+    }
+    return true;
+}
+
+app.get('/api/admins', ah(async (req, res) => {
+    if (!requireRootAdmin(req, res)) return;
+
+    const { data, error } = await supabase
+        .from('users')
+        .select()
+        .in('role', Object.keys(ROLE_NAMES))
+        .order('id');
+    if (error) throw error;
+
+    res.json(data);
+}));
+
+app.post('/api/admins', ah(async (req, res) => {
+    if (!requireRootAdmin(req, res)) return;
+
+    const id = String(req.body.id || '').trim();
+    const role = String(req.body.role || '').trim();
+    if (!isValidId(id)) {
+        return res.status(400).json({ error: 'Please enter a valid 8-digit ID' });
+    }
+    if (!ASSIGNABLE_ROLES.includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+    if (id === ROOT_ADMIN_ID) {
+        return res.status(400).json({ error: 'The root super admin cannot be modified.' });
+    }
+    if (ADMIN_ROLES[id]) {
+        return res.status(400).json({ error: 'This is a built-in admin and cannot be modified.' });
+    }
+
+    const existing = await getUser(id);
+
+    if (existing) {
+        const { data, error } = await supabase
+            .from('users')
+            .update({ role })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        return res.json(data);
+    }
+
+    // Promote a brand-new ID straight to a role
+    const { data, error } = await supabase.from('users').insert({
+        id,
+        role,
+        points_count: 0,
+        booth_1: false,
+        booth_2: false,
+        booth_3: false
+    }).select().single();
+    if (error) throw error;
+
+    res.status(201).json(data);
 }));
 
 app.post('/api/users/:id/add-points', ah(async (req, res) => {

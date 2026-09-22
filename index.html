@@ -138,6 +138,9 @@
                     <button id="tabPurchase" class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
                         User Purchases
                     </button>
+                    <button id="tabAdmins" class="hidden px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        Manage Admins
+                    </button>
                 </div>
                 
                 <!-- Booth Management Tab -->
@@ -282,6 +285,48 @@
                     </div>
                     
                     <p id="purchaseSearchError" class="text-red-500 mt-4 hidden"></p>
+                </div>
+
+                <!-- Manage Admins Tab (root super admin only) -->
+                <div id="adminsTab" class="hidden">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Add Admin / Switch Role</h3>
+                        <div class="flex gap-2">
+                            <input
+                                type="text"
+                                id="adminUserId"
+                                maxlength="8"
+                                pattern="[0-9]{8}"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                placeholder="Enter 8-digit ID"
+                            >
+                            <select
+                                id="adminRoleSelect"
+                                class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            >
+                                <option value="booth1">Booth 1 Admin</option>
+                                <option value="booth2">Booth 2 Admin</option>
+                                <option value="booth3">Booth 3 Admin</option>
+                                <option value="super">Super Admin</option>
+                                <option value="user">Regular User (remove admin)</option>
+                            </select>
+                            <button
+                                id="saveAdminBtn"
+                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                                Save
+                            </button>
+                        </div>
+                        <p id="adminError" class="text-red-500 mt-4 hidden"></p>
+                        <p id="adminSuccess" class="text-green-600 mt-4 hidden"></p>
+                    </div>
+
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold mb-4">Current Admins</h3>
+                        <div id="adminList" class="space-y-3">
+                            <p class="text-gray-500">No database-assigned admins.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
