@@ -5,14 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Points & Booth Tracking System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { DEFAULT: '#7F0000', dark: '#5F0000', light: '#A83232' },
+                        cream: '#FFFBF2'
+                    }
+                }
+            }
+        };
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- Login Screen -->
         <div id="loginScreen" class="max-w-md mx-auto">
-            <div class="bg-white rounded-lg shadow-lg p-8">
-                <h1 class="text-3xl font-bold text-center mb-6 text-indigo-600">Points & Booth Tracking</h1>
+            <div class="bg-cream rounded-lg shadow-lg p-8">
+                <h1 class="text-3xl font-bold text-center mb-6 text-brand">Points & Booth Tracking</h1>
                 <p class="text-center text-gray-600 mb-6">Enter your 8-digit ID to login</p>
                 
                 <div class="mb-4">
@@ -22,14 +34,14 @@
                         id="userId" 
                         maxlength="8" 
                         pattern="[0-9]{8}"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                         placeholder="Enter 8-digit ID"
                     >
                 </div>
                 
                 <button 
                     id="loginBtn" 
-                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                    class="w-full bg-brand text-white py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                 >
                     Login
                 </button>
@@ -38,15 +50,15 @@
 
                 <p class="text-center text-gray-600 mt-6">
                     Don't have an account?
-                    <button id="showSignupLink" class="text-indigo-600 font-medium hover:underline">Sign up</button>
+                    <button id="showSignupLink" class="text-brand font-medium hover:underline">Sign up</button>
                 </p>
             </div>
         </div>
 
         <!-- Signup Screen -->
         <div id="signupScreen" class="hidden max-w-md mx-auto">
-            <div class="bg-white rounded-lg shadow-lg p-8">
-                <h1 class="text-3xl font-bold text-center mb-6 text-indigo-600">Create Account</h1>
+            <div class="bg-cream rounded-lg shadow-lg p-8">
+                <h1 class="text-3xl font-bold text-center mb-6 text-brand">Create Account</h1>
                 <p class="text-center text-gray-600 mb-6">Choose your 8-digit ID to sign up</p>
 
                 <div class="mb-4">
@@ -56,14 +68,14 @@
                         id="signupUserId"
                         maxlength="8"
                         pattern="[0-9]{8}"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                         placeholder="Choose an 8-digit ID"
                     >
                 </div>
 
                 <button
                     id="signupBtn"
-                    class="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                    class="w-full bg-brand text-white py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                 >
                     Sign Up
                 </button>
@@ -72,16 +84,16 @@
 
                 <p class="text-center text-gray-600 mt-6">
                     Already have an account?
-                    <button id="showLoginLink" class="text-indigo-600 font-medium hover:underline">Login</button>
+                    <button id="showLoginLink" class="text-brand font-medium hover:underline">Login</button>
                 </p>
             </div>
         </div>
 
         <!-- User Dashboard -->
         <div id="userDashboard" class="hidden max-w-2xl mx-auto">
-            <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="bg-cream rounded-lg shadow-lg p-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-bold text-indigo-600">User Dashboard</h1>
+                    <h1 class="text-2xl font-bold text-brand">User Dashboard</h1>
                     <button id="userLogoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
                         Logout
                     </button>
@@ -91,7 +103,7 @@
                     <p class="text-gray-600">Your ID: <span id="userDisplayId" class="font-semibold"></span></p>
                 </div>
                 
-                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-6 mb-6">
+                <div class="bg-gradient-to-r from-brand to-brand-light rounded-lg p-6 mb-6">
                     <p class="text-white text-lg">Current Points</p>
                     <p id="userPoints" class="text-white text-4xl font-bold">0</p>
                 </div>
@@ -119,10 +131,10 @@
 
         <!-- Admin Dashboard -->
         <div id="adminDashboard" class="hidden max-w-4xl mx-auto">
-            <div class="bg-white rounded-lg shadow-lg p-8">
+            <div class="bg-cream rounded-lg shadow-lg p-8">
                 <div class="flex justify-between items-center mb-6">
                     <div>
-                        <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
+                        <h1 class="text-2xl font-bold text-brand">Admin Dashboard</h1>
                         <p id="adminWelcome" class="text-gray-600"></p>
                     </div>
                     <button id="adminLogoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
@@ -132,7 +144,7 @@
                 
                 <!-- Admin Tabs -->
                 <div class="flex border-b mb-6">
-                    <button id="tabBooth" class="px-4 py-2 border-b-2 border-indigo-600 text-indigo-600 font-medium">
+                    <button id="tabBooth" class="px-4 py-2 border-b-2 border-brand text-brand font-medium">
                         Booth Management
                     </button>
                     <button id="tabPurchase" class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
@@ -153,12 +165,12 @@
                                 id="searchUserId" 
                                 maxlength="8" 
                                 pattern="[0-9]{8}"
-                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                                 placeholder="Enter 8-digit ID"
                             >
                             <button 
                                 id="searchBtn" 
-                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                class="bg-brand text-white px-6 py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                             >
                                 Search
                             </button>
@@ -176,7 +188,7 @@
                                         type="number"
                                         id="pointsToAdd"
                                         min="1"
-                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                                         placeholder="Points to add"
                                     >
                                     <button
@@ -236,12 +248,12 @@
                                 id="purchaseSearchUserId" 
                                 maxlength="8" 
                                 pattern="[0-9]{8}"
-                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                                 placeholder="Enter 8-digit ID"
                             >
                             <button 
                                 id="purchaseSearchBtn" 
-                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                class="bg-brand text-white px-6 py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                             >
                                 Search
                             </button>
@@ -270,12 +282,12 @@
                                         type="number" 
                                         id="pointsToDeduct" 
                                         min="1"
-                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                                         placeholder="Points to deduct"
                                     >
                                     <button 
                                         id="processPurchaseBtn" 
-                                        class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                        class="bg-brand text-white px-6 py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                                     >
                                         Process
                                     </button>
@@ -297,12 +309,12 @@
                                 id="adminUserId"
                                 maxlength="8"
                                 pattern="[0-9]{8}"
-                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                                 placeholder="Enter 8-digit ID"
                             >
                             <select
                                 id="adminRoleSelect"
-                                class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                             >
                                 <option value="booth1">Booth 1 Admin</option>
                                 <option value="booth2">Booth 2 Admin</option>
@@ -312,7 +324,7 @@
                             </select>
                             <button
                                 id="saveAdminBtn"
-                                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                                class="bg-brand text-white px-6 py-3 rounded-lg font-medium hover:bg-brand-dark transition-colors"
                             >
                                 Save
                             </button>

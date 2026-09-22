@@ -193,8 +193,8 @@ function setupAdminTabs() {
     function activateTab(activeIndex) {
         tabs.forEach(([btn, content], i) => {
             const active = i === activeIndex;
-            btn.classList.toggle('border-indigo-600', active);
-            btn.classList.toggle('text-indigo-600', active);
+            btn.classList.toggle('border-brand', active);
+            btn.classList.toggle('text-brand', active);
             btn.classList.toggle('border-transparent', !active);
             btn.classList.toggle('text-gray-500', !active);
             content.classList.toggle('hidden', !active);
